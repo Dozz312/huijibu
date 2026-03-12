@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>回家不</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'] },
+          colors: {
+            warm: { 50:'#FFFBEB',100:'#FEF3C7',200:'#FDE68A',300:'#FCD34D',400:'#FBBF24',500:'#F59E0B',600:'#D97706',700:'#B45309' },
+            home:   { light:'#D1FAE5', DEFAULT:'#10B981', dark:'#065F46' },
+            away:   { light:'#FEE2E2', DEFAULT:'#EF4444', dark:'#991B1B' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .fade-in { animation: fadeIn .3s ease-out; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .status-toggle { transition: all .25s cubic-bezier(.4,0,.2,1); }
+    .card-hover { transition: transform .15s ease, box-shadow .15s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0,0,0,.1); }
+  </style>
+</head>
+<body class="bg-warm-50 min-h-screen font-sans">
+
+<div x-data="app()" x-init="init()" x-cloak class="max-w-md mx-auto min-h-screen flex flex-col">
+
+  <!-- ==================== AUTH VIEW ==================== -->
+  <template x-if="!token">
+    <div class="flex-1 flex flex-col justify-center px-6 py-12 fade-in">
+      <div class="text-center mb-10">
+        <div class="text-6xl mb-4">🏠</div>
+        <h1 class="text-3xl font-black text-warm-700">回家不</h1>
+        <p class="text-warm-600 mt-2 text-sm">今晚谁回家，一目了然</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+        <div class="flex bg-warm-100 rounded-xl p-1">
+          <button @click="authMode='login'" :class="authMode==='login' ? 'bg-white shadow text-warm-700' : 'text-warm-500'"
+            class="flex-1 py-2 rounded-lg text-sm font-medium transition-all">登录</button>
+          <button @click="authMode='register'" :class="authMode==='register' ? 'bg-white shadow text-warm-700' : 'text-warm-500'"
+            class="flex-1 py-2 rounded-lg text-sm font-medium transition-all">注册</button>
+        </div>
+
+        <template x-if="authMode==='register'">
+          <div class="space-y-3 fade-in">
+            <input x-model="form.nickname" placeholder="昵称（如：老齐）" class="w-full px-4 py-3 rounded-xl border border-warm-200 focus:border-warm-400 focus:ring-2 focus:ring-warm-200 outline-none transition text-sm">
+            <input x-model="form.username" placeholder="用户名" class="w-full px-4 py-3 rounded-xl border border-warm-200 focus:border-warm-400 focus:ring-2 focus:ring-warm-200 outline-none transition text-sm">
+            <input x-model="form.password" type="password" placeholder="密码" class="w-full px-4 py-3 rounded-xl border border-warm-200 focus:border-warm-400 focus:ring-2 focus:ring-warm-200 outline-none transition text-sm">
+            <button @click="register()" :disabled="loading"
+              class="w-full py-3 bg-warm-500 hover:bg-warm-600 text-white rounded-xl font-medium transition disabled:opacity-50 text-sm">
+              <span x-show="!loading">注册并开始</span>
+              <span x-show="loading">请稍候...</span>
+            </button>
+          </div>
+        </template>
+
+        <template x-if="authMode==='login'">
+          <div class="space-y-3 fade-in">
+            <input x-model="form.username" placeholder="用户名" class="w-full px-4 py-3 rounded-xl border border-warm-200 focus:border-warm-400 focus:ring-2 focus:ring-warm-200 outline-none transition text-sm">
+            <input x-model="form.password" type="password" placeholder="密码" class="w-full px-4 py-3 rounded-xl border border-warm-200 focus:border-warm-400 focus:ring-2 focus:ring-warm-200 outline-none transition text-sm">
+            <button @click="login()" :disabled="loading"
+              class="w-full py-3 bg-warm-500 hover:bg-warm-600 text-white rounded-xl font-medium transition disabled:opacity-50 text-sm">
+              <span x-show="!loading">登录</span>
+              <span x-show="loading">请稍候...</span>
+            </button>
+          </div>
+        </template>
+
+        <p x-show="error" x-text="error" class="text-red-500 text-xs text-center"></p>
+      </div>
+    </div>
+  </template>
+
+  <!-- ==================== MAIN APP ==================== -->
+  <template x-if="token">
+    <div class="flex-1 flex flex-col">
+
+      <!-- Top Bar -->
+      <header class="px-5 pt-5 pb-3 flex items-center justify-between">
+        <h1 class="text-xl font-black text-warm-700">🏠 回家不</h1>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-warm-600" x-text="user?.nickname"></span>
+          <button @click="page='settings'" class="w-8 h-8 rounded-full bg-warm-100 flex items-center justify-center text-warm-600 hover:bg-warm-200 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- ====== HOME PAGE ====== -->
+      <template x-if="page==='home'">
+        <div class="flex-1 px-5 pb-24 space-y-5 fade-in">
+
+          <!-- No family prompt -->
+          <template x-if="families.length === 0">
+            <div class="text-center py-16 space-y-4">
+              <div class="text-5xl">👨‍👩‍👧‍👦</div>
+              <p class="text-warm-600 font-medium">还没有加入家庭</p>
+              <div class="flex gap-3 justify-center">
+                <button @click="page='create-family'" class="px-5 py-2.5 bg-warm-500 text-white rounded-xl text-sm font-medium hover:bg-warm-600 transition">创建家庭</button>
+                <button @click="page='join-family'" class="px-5 py-2.5 bg-white border border-warm-300 text-warm-700 rounded-xl text-sm font-medium hover:bg-warm-50 transition">加入家庭</button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Family status cards -->
+          <template x-for="fs in familyStatuses" :key="fs.family_id">
+            <div class="space-y-4 fade-in">
+              <!-- Date & Summary -->
+              <div class="bg-white rounded-2xl shadow-sm p-4 border border-warm-100">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs text-warm-500" x-text="fs.family_name"></p>
+                    <p class="text-sm font-medium text-warm-700" x-text="formatDate(fs.date)"></p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-bold text-warm-700" x-text="fs.summary"></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- My status toggle -->
+              <div class="bg-white rounded-2xl shadow-sm p-5 border border-warm-100">
+                <p class="text-xs text-warm-500 mb-3 font-medium">我的状态</p>
+                <div class="flex gap-3">
+                  <button @click="updateStatus(fs.family_id, true)" :disabled="loading"
+                    :class="getMyStatus(fs)?.going_home !== false ? 'bg-home text-white shadow-lg shadow-home/30 scale-105' : 'bg-home-light text-home-dark'"
+                    class="flex-1 py-4 rounded-xl font-bold text-lg status-toggle">
+                    ✅ 回家
+                  </button>
+                  <button @click="updateStatus(fs.family_id, false)" :disabled="loading"
+                    :class="getMyStatus(fs)?.going_home === false ? 'bg-away text-white shadow-lg shadow-away/30 scale-105' : 'bg-away-light text-away-dark'"
+                    class="flex-1 py-4 rounded-xl font-bold text-lg status-toggle">
+                    ❌ 不回
+                  </button>
+                </div>
+                <!-- Reason input (shown when not going home) -->
+                <template x-if="getMyStatus(fs)?.going_home === false">
+                  <div class="mt-3 fade-in">
+                    <input :value="getMyStatus(fs)?.reason || ''"
+                      @change="updateStatus(fs.family_id, false, $event.target.value)"
+                      placeholder="原因（选填：加班、出差...）"
+                      class="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:border-warm-400 focus:ring-1 focus:ring-warm-200 outline-none">
+                  </div>
+                </template>
+              </div>
+
+              <!-- Family members -->
+              <div class="bg-white rounded-2xl shadow-sm border border-warm-100 overflow-hidden">
+                <p class="text-xs text-warm-500 font-medium px-5 pt-4 pb-2">家人状态</p>
+                <template x-for="(m, idx) in fs.members.filter(m => m.user_id !== user?.id)" :key="m.user_id">
+                  <div :class="idx > 0 ? 'border-t border-warm-50' : ''" class="px-5 py-3.5 flex items-center justify-between card-hover">
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg"
+                        :class="m.going_home ? 'bg-home-light' : 'bg-away-light'"
+                        x-text="m.nickname?.charAt(0) || '?'"></div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-800" x-text="m.nickname"></p>
+                        <p x-show="m.reason" class="text-xs text-gray-400" x-text="m.reason"></p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span :class="m.going_home ? 'bg-home-light text-home-dark' : 'bg-away-light text-away-dark'"
+                        class="px-2.5 py-1 rounded-full text-xs font-medium"
+                        x-text="m.going_home ? '回家' : '不回'"></span>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="fs.members.filter(m => m.user_id !== user?.id).length === 0">
+                  <p class="px-5 py-4 text-sm text-warm-400 text-center">还没有其他家人加入</p>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- ====== CREATE FAMILY ====== -->
+      <template x-if="page==='create-family'">
+        <div class="flex-1 px-5 pb-24 fade-in">
+          <button @click="page='home'" class="text-warm-500 text-sm mb-4 flex items-center gap-1">← 返回</button>
+          <h2 class="text-xl font-bold text-warm-700 mb-6">创建家庭</h2>
+          <div class="bg-white rounded-2xl shadow-sm p-6 space-y-4 border border-warm-100">
+            <input x-model="familyForm.name" placeholder="家庭名称（如：老齐家）" class="w-full px-4 py-3 rounded-xl border border-warm-200 focus:border-warm-400 focus:ring-2 focus:ring-warm-200 outline-none transition text-sm">
+            <button @click="createFamily()" :disabled="loading || !familyForm.name"
+              class="w-full py-3 bg-warm-500 hover:bg-warm-600 text-white rounded-xl font-medium transition disabled:opacity-50 text-sm">创建</button>
+          </div>
+          <p x-show="error" x-text="error" class="text-red-500 text-xs text-center mt-3"></p>
+        </div>
+      </template>
+
+      <!-- ====== JOIN FAMILY ====== -->
+      <template x-if="page==='join-family'">
+        <div class="flex-1 px-5 pb-24 fade-in">
+          <button @click="page='home'" class="text-warm-500 text-sm mb-4 flex items-center gap-1">← 返回</button>
+          <h2 class="text-xl font-bold text-warm-700 mb-6">加入家庭</h2>
+          <div class="bg-white rounded-2xl shadow-sm p-6 space-y-4 border border-warm-100">
+            <input x-model="familyForm.invite_code" placeholder="输入 6 位邀请码" maxlength="6"
+              class="w-full px-4 py-3 rounded-xl border border-warm-200 focus:border-warm-400 focus:ring-2 focus:ring-warm-200 outline-none transition text-sm text-center tracking-[0.3em] uppercase font-mono text-lg">
+            <button @click="joinFamily()" :disabled="loading || familyForm.invite_code?.length < 6"
+              class="w-full py-3 bg-warm-500 hover:bg-warm-600 text-white rounded-xl font-medium transition disabled:opacity-50 text-sm">加入</button>
+          </div>
+          <p x-show="error" x-text="error" class="text-red-500 text-xs text-center mt-3"></p>
+        </div>
+      </template>
+
+      <!-- ====== SETTINGS ====== -->
+      <template x-if="page==='settings'">
+        <div class="flex-1 px-5 pb-24 fade-in">
+          <button @click="page='home'" class="text-warm-500 text-sm mb-4 flex items-center gap-1">← 返回</button>
+          <h2 class="text-xl font-bold text-warm-700 mb-6">设置</h2>
+
+          <div class="space-y-4">
+            <!-- Family management -->
+            <div class="bg-white rounded-2xl shadow-sm p-5 border border-warm-100 space-y-3">
+              <p class="text-sm font-bold text-warm-700">我的家庭</p>
+              <template x-for="f in families" :key="f.id">
+                <div class="flex items-center justify-between py-2 border-b border-warm-50 last:border-0">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800" x-text="f.name"></p>
+                    <p class="text-xs text-gray-400"><span x-text="f.member_count"></span> 位成员 · <span x-text="f.role === 'creator' ? '创建者' : '成员'"></span></p>
+                  </div>
+                  <button @click="showFamilyDetail(f)" class="text-warm-500 text-xs">详情</button>
+                </div>
+              </template>
+              <div class="flex gap-2 pt-2">
+                <button @click="page='create-family'" class="flex-1 py-2 text-xs bg-warm-100 text-warm-700 rounded-lg hover:bg-warm-200 transition font-medium">创建家庭</button>
+                <button @click="page='join-family'" class="flex-1 py-2 text-xs bg-warm-100 text-warm-700 rounded-lg hover:bg-warm-200 transition font-medium">加入家庭</button>
+              </div>
+            </div>
+
+            <!-- Family detail (invite code) -->
+            <template x-if="selectedFamily">
+              <div class="bg-white rounded-2xl shadow-sm p-5 border border-warm-100 space-y-3 fade-in">
+                <p class="text-sm font-bold text-warm-700" x-text="selectedFamily.name + ' · 邀请码'"></p>
+                <div class="bg-warm-50 rounded-xl p-4 text-center">
+                  <p class="text-2xl font-mono font-bold tracking-[0.4em] text-warm-700" x-text="selectedFamily.invite_code"></p>
+                  <p class="text-xs text-warm-500 mt-2">分享给家人，输入即可加入</p>
+                </div>
+                <div class="space-y-1">
+                  <p class="text-xs text-warm-500 font-medium">成员列表</p>
+                  <template x-for="m in selectedFamily.members" :key="m.user_id">
+                    <div class="flex items-center gap-2 py-1.5">
+                      <div class="w-6 h-6 rounded-full bg-warm-200 flex items-center justify-center text-xs text-warm-700" x-text="m.nickname?.charAt(0)"></div>
+                      <span class="text-sm text-gray-700" x-text="m.nickname"></span>
+                      <span x-show="m.role==='creator'" class="text-xs text-warm-500">(创建者)</span>
+                    </div>
+                  </template>
+                </div>
+                <button @click="selectedFamily=null" class="w-full py-2 text-xs text-warm-500 hover:text-warm-700 transition">收起</button>
+              </div>
+            </template>
+
+            <!-- API Token -->
+            <div class="bg-white rounded-2xl shadow-sm p-5 border border-warm-100 space-y-3">
+              <p class="text-sm font-bold text-warm-700">API Token（供 AI 调用）</p>
+              <p class="text-xs text-gray-400">将此 Token 配置到你的 AI 助手中，即可通过对话更新回家状态</p>
+              <div class="bg-gray-50 rounded-xl p-3 flex items-center gap-2">
+                <code class="text-xs text-gray-600 flex-1 break-all" x-text="showToken ? user?.api_token : '••••••••••••••••••••'"></code>
+                <button @click="showToken = !showToken" class="text-warm-500 text-xs whitespace-nowrap" x-text="showToken ? '隐藏' : '显示'"></button>
+              </div>
+              <div class="flex gap-2">
+                <button @click="copyToken()" class="flex-1 py-2 text-xs bg-warm-100 text-warm-700 rounded-lg hover:bg-warm-200 transition font-medium">
+                  <span x-text="copied ? '已复制 ✓' : '复制 Token'"></span>
+                </button>
+                <button @click="regenerateToken()" class="flex-1 py-2 text-xs bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition font-medium">重新生成</button>
+              </div>
+            </div>
+
+            <!-- API Docs link -->
+            <a href="/docs" target="_blank" class="block bg-white rounded-2xl shadow-sm p-5 border border-warm-100 card-hover">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-bold text-warm-700">API 文档</p>
+                  <p class="text-xs text-gray-400">查看完整的 OpenAPI 接口文档</p>
+                </div>
+                <span class="text-warm-400">→</span>
+              </div>
+            </a>
+
+            <!-- Logout -->
+            <button @click="logout()" class="w-full py-3 bg-white border border-red-200 text-red-500 rounded-2xl text-sm font-medium hover:bg-red-50 transition">退出登录</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Bottom Nav -->
+      <nav x-show="page==='home' || page==='settings'" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-warm-100">
+        <div class="max-w-md mx-auto flex">
+          <button @click="page='home'; loadData()" class="flex-1 py-3 flex flex-col items-center gap-0.5"
+            :class="page==='home' ? 'text-warm-600' : 'text-gray-400'">
+            <span class="text-lg">🏠</span>
+            <span class="text-xs">首页</span>
+          </button>
+          <button @click="page='settings'" class="flex-1 py-3 flex flex-col items-center gap-0.5"
+            :class="page==='settings' ? 'text-warm-600' : 'text-gray-400'">
+            <span class="text-lg">⚙️</span>
+            <span class="text-xs">设置</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </template>
+</div>
+
+<script>
+const API = window.location.origin;
+
+function app() {
+  return {
+    token: localStorage.getItem('hjb_token'),
+    user: null,
+    authMode: 'login',
+    form: { username: '', password: '', nickname: '' },
+    familyForm: { name: '', invite_code: '' },
+    families: [],
+    familyStatuses: [],
+    selectedFamily: null,
+    page: 'home',
+    loading: false,
+    error: '',
+    showToken: false,
+    copied: false,
+
+    async init() {
+      if (this.token) {
+        await this.loadUser();
+        await this.loadData();
+      }
+    },
+
+    async api(method, path, body = null) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+      };
+      if (this.token) opts.headers['Authorization'] = `Bearer ${this.token}`;
+      if (body) opts.body = JSON.stringify(body);
+
+      const res = await fetch(API + path, opts);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `请求失败 (${res.status})`);
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    },
+
+    async register() {
+      this.loading = true;
+      this.error = '';
+      try {
+        const data = await this.api('POST', '/api/v1/auth/register', {
+          username: this.form.username,
+          password: this.form.password,
+          nickname: this.form.nickname,
+        });
+        this.token = data.access_token;
+        localStorage.setItem('hjb_token', this.token);
+        await this.loadUser();
+        await this.loadData();
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async login() {
+      this.loading = true;
+      this.error = '';
+      try {
+        const data = await this.api('POST', '/api/v1/auth/login', {
+          username: this.form.username,
+          password: this.form.password,
+        });
+        this.token = data.access_token;
+        localStorage.setItem('hjb_token', this.token);
+        await this.loadUser();
+        await this.loadData();
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async loadUser() {
+      try {
+        this.user = await this.api('GET', '/api/v1/auth/me');
+      } catch {
+        this.logout();
+      }
+    },
+
+    async loadData() {
+      try {
+        this.families = await this.api('GET', '/api/v1/family');
+        if (this.families.length > 0) {
+          this.familyStatuses = await this.api('GET', '/api/v1/status');
+        } else {
+          this.familyStatuses = [];
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    async createFamily() {
+      this.loading = true;
+      this.error = '';
+      try {
+        await this.api('POST', '/api/v1/family', { name: this.familyForm.name });
+        this.familyForm.name = '';
+        await this.loadData();
+        this.page = 'home';
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async joinFamily() {
+      this.loading = true;
+      this.error = '';
+      try {
+        await this.api('POST', '/api/v1/family/join', { invite_code: this.familyForm.invite_code });
+        this.familyForm.invite_code = '';
+        await this.loadData();
+        this.page = 'home';
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async showFamilyDetail(f) {
+      try {
+        this.selectedFamily = await this.api('GET', `/api/v1/family/${f.id}`);
+      } catch (e) {
+        this.error = e.message;
+      }
+    },
+
+    getMyStatus(fs) {
+      return fs.members.find(m => m.user_id === this.user?.id);
+    },
+
+    async updateStatus(familyId, goingHome, reason = null) {
+      this.loading = true;
+      try {
+        const body = { going_home: goingHome };
+        if (reason !== null) body.reason = reason;
+
+        const myCurrentStatus = this.familyStatuses
+          .find(fs => fs.family_id === familyId)?.members
+          .find(m => m.user_id === this.user?.id);
+        if (!goingHome && reason === null && myCurrentStatus?.reason) {
+          body.reason = myCurrentStatus.reason;
+        }
+
+        await this.api('PUT', `/api/v1/status/me?family_id=${familyId}`, body);
+        await this.loadData();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async copyToken() {
+      try {
+        await navigator.clipboard.writeText(this.user?.api_token);
+        this.copied = true;
+        setTimeout(() => this.copied = false, 2000);
+      } catch {}
+    },
+
+    async regenerateToken() {
+      if (!confirm('重新生成后，旧 Token 将立即失效。确定？')) return;
+      try {
+        this.user = await this.api('POST', '/api/v1/auth/token/regenerate');
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    logout() {
+      this.token = null;
+      this.user = null;
+      this.families = [];
+      this.familyStatuses = [];
+      localStorage.removeItem('hjb_token');
+      this.page = 'home';
+    },
+
+    formatDate(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      const weekdays = ['日','一','二','三','四','五','六'];
+      return `${d.getMonth()+1}月${d.getDate()}日 周${weekdays[d.getDay()]}`;
+    },
+  };
+}
+</script>
+</body>
+</html>

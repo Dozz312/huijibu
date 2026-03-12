@@ -1,0 +1,18 @@
+app = 'huijibu'
+primary_region = 'hkg'
+
+[build]
+
+[env]
+  SECRET_KEY = 'fly-production-secret-change-me-2026'
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[mounts]
+  source = 'huijibu_data'
+  destination = '/data'
