@@ -1,0 +1,41 @@
+#!/usr/bin/expect -f
+set timeout 300
+spawn npx zeabur@latest deploy
+
+expect {
+    "Would you like to create one now" {
+        send "Y\r"
+        exp_continue
+    }
+    "project name" {
+        send "huijibu\r"
+        exp_continue
+    }
+    "region" {
+        send "\r"
+        exp_continue
+    }
+    "Select" {
+        send "\r"
+        exp_continue
+    }
+    "enter" {
+        send "\r"
+        exp_continue
+    }
+    "Deploying" {
+        exp_continue
+    }
+    "deployed" {
+        puts "\nDeploy complete!"
+    }
+    "URL" {
+        exp_continue
+    }
+    eof {
+        puts "\nProcess ended"
+    }
+    timeout {
+        puts "\nTimeout"
+    }
+}
