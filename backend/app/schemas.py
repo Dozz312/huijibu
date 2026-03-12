@@ -36,6 +36,11 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
 
 
+class AdminResetPassword(BaseModel):
+    username: str
+    new_password: str
+
+
 class FamilyCreate(BaseModel):
     name: str
 

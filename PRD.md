@@ -118,6 +118,7 @@
 | `GET` | `/api/v1/auth/me` | 获取当前用户信息 |
 | `PATCH` | `/api/v1/auth/me` | 修改昵称等个人信息 |
 | `POST` | `/api/v1/auth/token/regenerate` | 重新生成 API Token |
+| `POST` | `/api/v1/auth/admin/reset-password` | 管理员重置用户密码（需 X-Admin-Key） |
 | `GET` | `/api/v1/family` | 获取我的家庭列表 |
 | `POST` | `/api/v1/family` | 创建家庭 |
 | `POST` | `/api/v1/family/join` | 通过邀请码加入家庭 |

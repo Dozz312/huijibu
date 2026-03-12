@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..auth import create_access_token, get_current_user, hash_password, verify_password
+from ..config import settings
 from ..database import get_db
 from ..models import User, _api_token
-from ..schemas import TokenResponse, UserInfo, UserLogin, UserRegister, UserUpdate
+from ..schemas import AdminResetPassword, TokenResponse, UserInfo, UserLogin, UserRegister, UserUpdate
 
 router = APIRouter(prefix="/api/v1/auth", tags=["认证"])
 
@@ -57,3 +58,21 @@ def regenerate_api_token(user: User = Depends(get_current_user), db: Session = D
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/admin/reset-password")
+def admin_reset_password(
+    body: AdminResetPassword,
+    x_admin_key: str = Header(alias="X-Admin-Key"),
+    db: Session = Depends(get_db),
+):
+    if x_admin_key != settings.ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="管理员密钥错误")
+
+    user = db.query(User).filter(User.username == body.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return {"message": f"用户 {user.nickname}（@{user.username}）的密码已重置"}
