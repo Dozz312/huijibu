@@ -40,7 +40,7 @@
 #### F1: 创建家庭
 
 - 用户注册后可创建一个家庭
-- 设置家庭名称（如"老齐家"）
+- 设置家庭名称（如"老祁家"）
 - 自动生成 6 位邀请码 + 邀请链接
 
 #### F2: 加入家庭
@@ -91,14 +91,14 @@
 
 #### F8: 注册/登录
 
-- 支持手机号 + 验证码登录（国内主流）
-- 支持 Apple ID / 微信登录（便捷）
-- 首次登录设置昵称和头像
+- MVP 阶段：用户名 + 密码登录
+- 后续支持：手机号 + 验证码、Apple ID / 微信登录
+- 首次登录设置昵称
 
-#### F9: 个人设置
+#### F9: 个人设置（✅ 已实现）
 
-- 修改昵称、头像
-- 通知偏好
+- 修改昵称（设置页内联编辑）
+- 通知偏好（V2）
 - 生成/刷新个人 API Token
 
 ### 4.4 API 接口（供 AI 调用）
@@ -113,10 +113,20 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `GET` | `/api/v1/status` | 获取当前家庭所有成员状态 |
-| `PUT` | `/api/v1/status/me` | 更新自己的回家状态 |
+| `POST` | `/api/v1/auth/register` | 注册新用户 |
+| `POST` | `/api/v1/auth/login` | 登录 |
+| `GET` | `/api/v1/auth/me` | 获取当前用户信息 |
+| `PATCH` | `/api/v1/auth/me` | 修改昵称等个人信息 |
+| `POST` | `/api/v1/auth/token/regenerate` | 重新生成 API Token |
+| `GET` | `/api/v1/family` | 获取我的家庭列表 |
+| `POST` | `/api/v1/family` | 创建家庭 |
+| `POST` | `/api/v1/family/join` | 通过邀请码加入家庭 |
+| `GET` | `/api/v1/family/{id}` | 获取家庭详情及成员 |
+| `DELETE` | `/api/v1/family/{id}/members/{uid}` | 移除成员或退出家庭 |
+| `GET` | `/api/v1/status` | 获取所有家庭今日状态 |
 | `GET` | `/api/v1/status/me` | 获取自己的当前状态 |
-| `GET` | `/api/v1/family` | 获取家庭信息和成员列表 |
+| `PUT` | `/api/v1/status/me` | 更新自己的回家状态 |
+| `GET` | `/api/v1/status/family/{id}` | 获取指定家庭的今日状态 |
 
 **更新状态请求示例：**
 
@@ -337,32 +347,46 @@ AI Agent 发请求时携带 Bearer Token
 
 ## 10. 开发优先级
 
-### Phase 1 - MVP（2 周）
+### Phase 1 - MVP ✅ 已完成
 
-- [x] 用户注册/登录（手机号验证码）
-- [x] 创建/加入家庭
+- [x] 用户注册/登录（用户名 + 密码）
+- [x] 创建/加入家庭（邀请码机制）
 - [x] 首页查看所有人状态
-- [x] 一键切换自己的回家状态
-- [x] 每日凌晨自动重置
-- [x] RESTful API + Token 认证
-- [x] OpenAPI 文档
+- [x] 一键切换自己的回家状态 + 原因
+- [x] 每日凌晨 4 点自动重置
+- [x] RESTful API + JWT / API Token 双认证
+- [x] OpenAPI 文档（/docs）
+- [x] 修改昵称
+- [x] 部署上线（Render）
+- [x] Siri 快捷指令配置文档
 
-### Phase 2 - 体验优化（2 周）
+### Phase 2 - 体验优化
 
 - [ ] 推送通知（有人状态变更时）
 - [ ] Apple / 微信登录
-- [ ] 状态变更原因
-- [ ] 多家庭切换
+- [ ] 多家庭切换 UI 优化
 - [ ] Widget 小组件（iOS / Android）
+- [ ] 头像上传
 
-### Phase 3 - 智能化（2 周）
+### Phase 3 - 智能化
 
-- [ ] Siri 捷径集成
 - [ ] ChatGPT GPTs Action 模板
 - [ ] 智能提醒（下午定时推送）
 - [ ] 历史统计
+- [ ] 预计到家时间
 
 ---
 
-*文档版本：v1.0*  
+## 11. 线上环境
+
+| 项目 | 地址 |
+|------|------|
+| **Web 应用** | https://huijibu.onrender.com |
+| **API 文档** | https://huijibu.onrender.com/docs |
+| **源码仓库** | https://github.com/Dozz312/huijibu |
+| **Siri 配置指南** | `docs/Siri快捷指令配置指南.md` |
+
+---
+
+*文档版本：v1.1*  
 *最后更新：2026-03-12*
